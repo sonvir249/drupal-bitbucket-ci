@@ -40,9 +40,5 @@ FROM php-stage
 # Copy Node.js dependencies from the node-stage (if necessary)
 COPY --from=node-stage /usr/local /usr/local
 
-# Set the working directory back to Drupal
-WORKDIR /opt/drupal
-
 # Expose the appropriate ports
-EXPOSE 9000
-CMD ["php-fpm", "node"]
+CMD ["node"]
