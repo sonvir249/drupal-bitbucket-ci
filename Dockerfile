@@ -1,44 +1,49 @@
-# Stage 1: PHP base with Composer installation
-FROM php:8.3-fpm AS php-stage
+# Base image: PHP with Drupal and FPM
+FROM drupal:php8.3-fpm
+
+# Set the PHP version as an environment variable
 ENV PHP_VERSION=8.3
 
-# Set up PHP environment and install Composer
-WORKDIR /var/www/html
-EXPOSE 9000
-ENTRYPOINT ["docker-php-entrypoint"]
-CMD ["php-fpm"]
-
-# Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Set up Drupal environment
-ENV DRUPAL_VERSION=10.3
-WORKDIR /opt/drupal
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/drupal/vendor/bin
-
-# Stage 2: Node.js for frontend assets or additional JS functionality
-FROM node:20-bullseye AS node-stage
-
-# Ensure Node.js and npm are installed correctly
-RUN node --version && npm --version
-
-# Install necessary build tools and Node.js dependencies
+# Update and install required packages, including MariaDB client and PHP extensions
 RUN apt-get update && apt-get install -y \
+    rsync \
+    git \
+    libpng-dev \
+    libjpeg-dev \
+    libxml2-dev \
+    zlib1g-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    mariadb-client \
     build-essential \
     python3 \
     curl \
-    gnupg \
-    && apt-get install -y nodejs \
+    && docker-php-ext-install soap gd zip \
     && apt-get clean
 
-# Optional: Set environment variables or perform additional setup
-RUN export PIPELINES_ENV=PIPELINES_ENV
+# Install Composer globally
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Stage 3: Combine PHP and Node.js in the final image
-FROM php-stage
+# Install Node.js (using the official Node.js binary distribution for the latest version)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
 
-# Copy Node.js dependencies from the node-stage (if necessary)
-COPY --from=node-stage /usr/local /usr/local
+# Ensure Node.js and npm are available
+RUN npm install -g npm
 
-# Expose the appropriate ports
-CMD ["node"]
+# Copy the project files into the container (if required)
+# COPY . /app
+
+# Example: If there's a composer.json, run Composer install (PHP dependencies)
+# RUN composer install
+
+# Example: If there's a package.json, run npm install (Node.js dependencies)
+# COPY package*.json ./
+# RUN npm install
+
+# Expose the port used by PHP-FPM
+EXPOSE 9000
+
+# Define the default command (if you want to run a specific PHP/Node command)
+CMD ["php"]
